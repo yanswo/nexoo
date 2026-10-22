@@ -14,10 +14,13 @@ export async function createCommunity(_previous: CommunityCreateState, formData:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sua sessão expirou. Entre novamente." };
   const slug = `${name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${user.id.slice(0, 6)}`;
-  const { data: community, error } = await supabase.from("communities").insert({ owner_id: user.id, name, slug, description, color, visibility: "school" }).select("id").single();
-  if (error || !community) return { error: error?.message.includes("student_can_own_one_community") ? "Cada aluno pode criar apenas uma comunidade." : "Não foi possível criar a comunidade." };
-  const { error: memberError } = await supabase.from("community_members").insert({ community_id: community.id, user_id: user.id, role: "owner" });
-  if (memberError) return { error: "Comunidade criada, mas não foi possível concluir sua entrada nela." };
+  const { error } = await supabase.from("communities").insert({ owner_id: user.id, name, slug, description, color, visibility: "school" });
+  if (error) {
+    console.error("Erro ao criar comunidade:", error.message);
+    if (error.message.includes("student_can_own_one_community")) return { error: "Cada aluno pode criar apenas uma comunidade." };
+    if (error.code === "23505") return { error: "Você já possui uma comunidade." };
+    return { error: "Não foi possível criar a comunidade. Verifique se a migration de comunidades foi executada." };
+  }
   revalidatePath("/comunidades");
   return { success: true };
 }
