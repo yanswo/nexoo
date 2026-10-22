@@ -12,7 +12,10 @@ export type HomePost = {
   isSaved: boolean;
   topic: string;
   recommendationReason?: string;
+  comments: PostComment[];
 };
+
+export type PostComment = { id: string; body: string; createdAt: string; authorName: string; authorInitials: string };
 
 export type HomeEvent = {
   id: string;
@@ -73,18 +76,25 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
       ? supabase.from("post_likes").select("post_id").in("post_id", postIds)
       : Promise.resolve({ data: [] }),
     postIds.length
-      ? supabase.from("comments").select("post_id").in("post_id", postIds)
+      ? supabase.from("comments").select("id, post_id, body, created_at, author_id").in("post_id", postIds).order("created_at", { ascending: true })
       : Promise.resolve({ data: [] }),
   ]);
 
+  const commentRows = (comments ?? []) as Array<{ id: string; post_id: string; body: string; created_at: string; author_id: string }>;
+  const commentAuthorIds = [...new Set(commentRows.map((comment) => comment.author_id))];
+  const missingCommentAuthors = commentAuthorIds.filter((id) => !authorIds.includes(id));
+  const { data: commentProfiles } = missingCommentAuthors.length
+    ? await supabase.from("profiles").select("id, full_name, role").in("id", missingCommentAuthors)
+    : { data: [] };
   const profileById = new Map(
-    ((profiles ?? []) as Array<{ id: string; full_name: string; role: string }>).map((profile) => [
+    ([...((profiles ?? []) as Array<{ id: string; full_name: string; role: string }>), ...((commentProfiles ?? []) as Array<{ id: string; full_name: string; role: string }>)]).map((profile) => [
       profile.id,
       profile,
     ])
   );
   const likeCounts = new Map<string, number>();
   const commentCounts = new Map<string, number>();
+  const commentsByPost = new Map<string, PostComment[]>();
   const savedPostIds = new Set(((savedRows ?? []) as Array<{ post_id: string }>).map((row) => row.post_id));
   const likedPostIds = new Set(((likedRows ?? []) as Array<{ post_id: string }>).map((row) => row.post_id));
   const commentedPostIds = new Set(((commentedRows ?? []) as Array<{ post_id: string }>).map((row) => row.post_id));
@@ -102,8 +112,12 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
   for (const like of (likes ?? []) as Array<{ post_id: string }>) {
     likeCounts.set(like.post_id, (likeCounts.get(like.post_id) ?? 0) + 1);
   }
-  for (const comment of (comments ?? []) as Array<{ post_id: string }>) {
+  for (const comment of commentRows) {
     commentCounts.set(comment.post_id, (commentCounts.get(comment.post_id) ?? 0) + 1);
+    const authorName = displayName(profileById.get(comment.author_id)?.full_name);
+    const postComments = commentsByPost.get(comment.post_id) ?? [];
+    postComments.push({ id: comment.id, body: comment.body, createdAt: comment.created_at, authorName, authorInitials: initials(authorName) });
+    commentsByPost.set(comment.post_id, postComments);
   }
 
   const mappedPosts = rows.map((post) => {
@@ -122,6 +136,7 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
         isSaved: savedPostIds.has(post.id),
         topic: post.topic,
         recommendationReason: preferredTopicNames.has(post.topic) ? `Porque você interagiu com ${post.topic}` : undefined,
+        comments: commentsByPost.get(post.id) ?? [],
       };
     });
   const recommendedPosts = preferredTopics.length
