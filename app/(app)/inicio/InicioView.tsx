@@ -6,80 +6,49 @@ import { useRouter } from "next/navigation";
 import { useUser } from "../../components/UserProvider";
 import type { HomeEvent, HomePost } from "../../../lib/home";
 import { createClient } from "../../../lib/supabase/client";
-import { publishPost, savePost, type PublishState } from "./actions";
 import { createComment, toggleLike } from "@/app/actions/posts";
-import styles from "../../styles/dashboard.module.css";
+import { publishPost, savePost, type PublishState } from "./actions";
+import styles from "@/app/styles/inicio.module.css";
 
 function formatEvent(event: HomeEvent) {
   const date = new Date(event.startsAt);
-  return {
-    day: date.toLocaleDateString("pt-BR", { day: "2-digit" }),
-    month: date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase(),
-    time: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-  };
+  return { day: date.toLocaleDateString("pt-BR", { day: "2-digit" }), month: date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").toUpperCase(), time: date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) };
 }
 
-function formatRole(role: string) {
-  return role === "teacher" ? "Professor" : role === "staff" ? "Equipe escolar" : "Aluno";
-}
+function formatRole(role: string) { return role === "teacher" ? "Professor" : role === "staff" ? "Equipe escolar" : "Aluno"; }
+function formatToday() { return new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }); }
+function formatRelative(value: string) { const minutes = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 60000)); if (minutes < 60) return `há ${minutes} min`; const hours = Math.floor(minutes / 60); if (hours < 24) return `há ${hours} h`; return `há ${Math.floor(hours / 24)} d`; }
 
-function PublishButton() {
-  const { pending } = useFormStatus();
-  return <button className={styles.publish} type="submit" disabled={pending}>{pending ? "Publicando…" : "Publicar"} <Send /></button>;
-}
+function PublishButton() { const { pending } = useFormStatus(); return <button className={styles.publishButton} type="submit" disabled={pending}><Send />{pending ? "Publicando..." : "Publicar"}</button>; }
 
-export default function InicioView({ posts, events }: { posts: HomePost[]; events: HomeEvent[] }) {
+export default function InicioView({ posts, recommendedPosts, events }: { posts: HomePost[]; recommendedPosts: HomePost[]; events: HomeEvent[] }) {
   const user = useUser();
   const router = useRouter();
   const [state, action] = useActionState<PublishState, FormData>(publishPost, null);
-
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel("home-posts")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "posts" },
-        () => router.refresh()
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [router]);
-
-  return <div className={styles.page}>
-    <main>
-      <header className={styles.header}><div><div className={styles.eyebrow}>Colégio Horizonte</div><h1 className={styles.title}>Bom dia, {user.firstName}</h1></div><div className={styles.actions}><div className={styles.search}><Search />Buscar na escola</div><button className={styles.iconBtn} type="button" aria-label="Notificações"><Bell /></button></div></header>
-      <div className={styles.sectionHead}><span className={styles.sectionTitle}>Atualizações</span></div>
-      <form className={`${styles.card} ${styles.composer}`} action={action}>
-        <div className={styles.composerTop}><div className={styles.avatar} style={{ background: "#ef6f58" }}>{user.initials}</div><textarea className={styles.textarea} name="body" rows={2} maxLength={5000} placeholder="Compartilhe uma ideia, dúvida ou conquista..." /></div>
-        <div className={styles.composerBottom}><div className={styles.composerTools}><button className={styles.tool} type="button"><ImageIcon />Imagem</button><button className={styles.tool} type="button"><FileIcon />Arquivo</button></div><PublishButton /></div>
-        {state?.error && <div className={styles.error}>{state.error}</div>}
-        {state?.success && <div className={styles.success}>Publicação enviada.</div>}
-      </form>
-      {posts.length ? posts.map((post) => <PostCard key={post.id} post={post} />) : <div className={`${styles.card} ${styles.empty}`}>Ainda não há publicações. Seja a primeira pessoa a compartilhar algo.</div>}
-    </main>
-    <aside className={styles.right}><div className={`${styles.card} ${styles.rightCard}`}><div className={styles.rightHeader}><span className={styles.rightTitle}>Próximos eventos</span><span className={styles.muted}>{events.length}</span></div>{events.length ? events.map((event) => { const date = formatEvent(event); return <div className={styles.event} key={event.id}><div className={styles.date}><strong>{date.day}</strong><small>{date.month}</small></div><div><div className={styles.eventTitle}>{event.title}</div><div className={styles.eventMeta}>{date.time} · {event.location}</div></div></div>; }) : <div className={styles.muted}>Nenhum evento próximo.</div>}</div></aside>
-  </div>;
+  useEffect(() => { const supabase = createClient(); const channel = supabase.channel("home-posts").on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => router.refresh()).subscribe(); return () => { void supabase.removeChannel(channel); }; }, [router]);
+  return <main className={styles.page}>
+    <section className={styles.content}>
+      <header className={styles.header}><div><span className={styles.eyebrow}>{formatToday()}</span><h1>Bom dia, <em>{user.firstName}</em></h1><p>Veja o que está acontecendo na sua comunidade escolar.</p></div><div className={styles.headerActions}><div className={styles.search}><Search /><span>Buscar na escola</span><kbd>⌘ K</kbd></div><button className={styles.notification} aria-label="Notificações"><Bell /><i /></button></div></header>
+      <div className={styles.stats}><div><strong>{posts.length}</strong><span>atualizações recentes</span></div><div><strong>{events.length}</strong><span>próximos eventos</span></div><div><strong>∞</strong><span>possibilidades de aprender</span></div></div>
+      <section className={styles.composer}><div className={styles.composerHeading}><div className={styles.avatar} style={{ background: "#ef6f58" }}>{user.initials}</div><div><strong>Compartilhe com a escola</strong><span>O que você gostaria de contar hoje?</span></div></div><form action={action}><textarea name="body" rows={3} maxLength={5000} placeholder="Uma ideia, dúvida ou conquista..." /><div className={styles.composerFooter}><div className={styles.composerHint}><span>Visível para a comunidade escolar</span><label className={styles.topicSelect}>Tema <select name="topic" defaultValue="Geral"><option>Geral</option><option>Matemática</option><option>História</option><option>Ciências</option><option>Tecnologia</option><option>Robótica</option><option>Artes</option><option>Esportes</option><option>Avisos</option></select></label><button type="button"><ImageIcon /> Imagem</button><button type="button"><FileIcon /> Arquivo</button></div><PublishButton /></div>{state?.error && <div className={styles.error}>{state.error}</div>}{state?.success && <div className={styles.success}>Publicação enviada para a comunidade.</div>}</form></section>
+      {recommendedPosts.length > 0 && <section className={styles.recommendations}><div className={styles.recommendationHeading}><div><span className={styles.eyebrow}>Personalizado para você</span><h2>Para você</h2><p>Conteúdos escolhidos a partir das suas interações.</p></div><span className={styles.spark}>✦</span></div><div className={styles.recommendationGrid}>{recommendedPosts.map((post) => <PostCard key={`recommended-${post.id}`} post={post} recommended />)}</div></section>}
+      <div className={styles.feedHeading}><div><span className={styles.eyebrow}>Mural da escola</span><h2>Atualizações recentes</h2></div><span>{posts.length ? `${posts.length} publicações` : "Comece a conversa"}</span></div>
+      {posts.length ? posts.map((post) => <PostCard key={post.id} post={post} />) : <div className={styles.empty}><div>✦</div><strong>O mural está esperando por você</strong><p>Seja a primeira pessoa a compartilhar uma ideia, dúvida ou conquista.</p></div>}
+    </section>
+    <aside className={styles.aside}><div className={styles.asideIntro}><span className={styles.eyebrow}>Sua escola</span><strong>Um espaço para<br /><em>estar por perto.</em></strong><p>Conecte-se às pessoas, projetos e momentos que fazem parte da sua rotina.</p></div><section className={styles.eventsCard}><div className={styles.cardHeading}><div><span className={styles.eyebrow}>Agenda</span><h2>Próximos eventos</h2></div><a href="/agenda">Ver agenda <span>→</span></a></div>{events.length ? events.slice(0, 4).map((event) => { const date = formatEvent(event); return <div className={styles.event} key={event.id}><div className={styles.eventDate}><strong>{date.day}</strong><span>{date.month}</span></div><div><strong>{event.title}</strong><span>{date.time} · {event.location}</span></div></div>; }) : <p className={styles.noEvents}>Nenhum evento próximo.</p>}</section><div className={styles.tip}><span className={styles.tipIcon}>✦</span><div><strong>Uma dica para hoje</strong><p>Pequenas interações também constroem grandes comunidades.</p></div></div></aside>
+  </main>;
 }
 
-function PostCard({ post }: { post: HomePost }) {
+function PostCard({ post, recommended = false }: { post: HomePost; recommended?: boolean }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
-  return <article className={`${styles.card} ${styles.post}`}><div className={styles.postTop}><div className={styles.postUser}><div className={styles.avatar} style={{ background: "#4e82b8" }}>{post.authorInitials}</div><div><div className={styles.postName}>{post.authorName}</div><div className={styles.postRole}>{formatRole(post.authorRole)} · {formatRelative(post.createdAt)}</div></div></div></div><p className={styles.postBody}>{post.body}</p><div className={styles.postFooter}><form action={toggleLike}><input type="hidden" name="postId" value={post.id} /><input type="hidden" name="redirectPath" value="/inicio" /><button className={styles.postAction} type="submit">♡ {post.likeCount}</button></form><button className={styles.postAction} type="button" onClick={() => setCommentsOpen((open) => !open)}>◌ {post.commentCount}</button>{post.isSaved ? <span className={`${styles.postAction} ${styles.save}`}>▮ Salvo</span> : <form className={styles.save} action={savePost}><input type="hidden" name="postId" value={post.id} /><button className={styles.postAction} type="submit">▮ Salvar</button></form>}</div>{commentsOpen && <form style={{ display: "flex", gap: 8, marginTop: 12, borderTop: "1px solid #edf0f3", paddingTop: 12 }} action={createComment}><input type="hidden" name="postId" value={post.id} /><input type="hidden" name="redirectPath" value="/inicio" /><input style={{ flex: 1, border: "1px solid #dbe3ea", borderRadius: 7, padding: 8, fontSize: 11 }} name="body" maxLength={2000} placeholder="Escreva um comentário..." required /><button style={{ border: 0, borderRadius: 7, background: "#102541", color: "#fff", padding: "0 12px", fontSize: 10 }} type="submit">Enviar</button></form>}</article>;
+  return <article className={`${styles.post} ${recommended ? styles.recommendedPost : ""}`}>{recommended && <div className={styles.reason}><span>✦</span>{post.recommendationReason ?? "Recomendado para você"}</div>}<div className={styles.postHeader}><div className={styles.postUser}><div className={styles.postAvatar}>{post.authorInitials}</div><div><strong>{post.authorName}</strong><span>{formatRole(post.authorRole)} <b>·</b> {formatRelative(post.createdAt)}</span></div></div><button className={styles.more} aria-label="Mais opções">•••</button></div><div className={styles.topicBadge}>{post.topic}</div><p className={styles.postText}>{post.body}</p><div className={styles.postFooter}><form action={toggleLike}><input type="hidden" name="postId" value={post.id} /><input type="hidden" name="redirectPath" value="/inicio" /><button type="submit"><Heart />{post.likeCount || "Curtir"}</button></form><button type="button" onClick={() => setCommentsOpen((open) => !open)}><Comment />{post.commentCount || "Comentar"}</button>{post.isSaved ? <span className={styles.saved}><Bookmark />Salvo</span> : <form className={styles.saveForm} action={savePost}><input type="hidden" name="postId" value={post.id} /><button type="submit"><Bookmark />Salvar</button></form>}</div>{commentsOpen && <form className={styles.commentForm} action={createComment}><input type="hidden" name="postId" value={post.id} /><input type="hidden" name="redirectPath" value="/inicio" /><input name="body" maxLength={2000} placeholder="Escreva um comentário..." required /><button type="submit">Enviar</button></form>}</article>;
 }
 
-function formatRelative(value: string) {
-  const minutes = Math.max(1, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
-  if (minutes < 60) return `há ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours} h`;
-  return `há ${Math.floor(hours / 24)} d`;
-}
-
-function Search() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4-4" /></svg>; }
-function Bell() { return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4" /></svg>; }
+function Search() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="8" /><path d="m21 21-4-4" /></svg>; }
+function Bell() { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4" /></svg>; }
+function Heart() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20.8 8.8c0 5.5-8.8 10.2-8.8 10.2S3.2 14.3 3.2 8.8A4.8 4.8 0 0 1 12 6.3a4.8 4.8 0 0 1 8.8 2.5Z" /></svg>; }
+function Comment() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.3 8.3 0 0 1-3.4-.7L4 20l1.4-3.7A7.4 7.4 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z" /></svg>; }
+function Bookmark() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>; }
 function ImageIcon() { return <span>▧</span>; }
-function FileIcon() { return <span>¤</span>; }
-function Send() { return <span>➤</span>; }
+function FileIcon() { return <span>◫</span>; }
+function Send() { return <span>↗</span>; }

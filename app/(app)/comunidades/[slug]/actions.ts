@@ -9,6 +9,7 @@ export async function createCommunityPost(_previous: CommunityPostState, formDat
   const communityId = String(formData.get("communityId") ?? "");
   const slug = String(formData.get("slug") ?? "");
   const body = String(formData.get("body") ?? "").trim();
+  const topic = String(formData.get("topic") ?? "Geral").trim() || "Geral";
   if (!communityId || !slug) return { error: "Comunidade inválida." };
   if (!body) return { error: "Escreva algo antes de publicar." };
   if (body.length > 5000) return { error: "A publicação pode ter no máximo 5.000 caracteres." };
@@ -17,7 +18,7 @@ export async function createCommunityPost(_previous: CommunityPostState, formDat
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sua sessão expirou. Entre novamente." };
 
-  const { error } = await supabase.from("posts").insert({ author_id: user.id, community_id: communityId, body });
+  const { error } = await supabase.from("posts").insert({ author_id: user.id, community_id: communityId, body, topic });
   if (error) {
     console.error("Erro ao publicar na comunidade:", error.message);
     return { error: "Entre na comunidade para publicar." };

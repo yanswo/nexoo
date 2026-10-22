@@ -8,6 +8,7 @@ export type CommunityPost = {
   authorInitials: string;
   likeCount: number;
   commentCount: number;
+  topic: string;
 };
 
 export type CommunityDetails = {
@@ -41,10 +42,10 @@ export async function getCommunityBySlug(slug: string): Promise<CommunityDetails
 
   const [{ data: members }, { data: postRows }] = await Promise.all([
     supabase.from("community_members").select("user_id").eq("community_id", community.id),
-    supabase.from("posts").select("id, body, created_at, author_id").eq("community_id", community.id).order("created_at", { ascending: false }).limit(50),
+    supabase.from("posts").select("id, body, topic, created_at, author_id").eq("community_id", community.id).order("created_at", { ascending: false }).limit(50),
   ]);
 
-  const rows = (postRows ?? []) as Array<{ id: string; body: string; created_at: string; author_id: string }>;
+  const rows = (postRows ?? []) as Array<{ id: string; body: string; topic: string; created_at: string; author_id: string }>;
   const postIds = rows.map((post) => post.id);
   const authorIds = [...new Set(rows.map((post) => post.author_id))];
   const [{ data: profiles }, { data: likes }, { data: comments }] = await Promise.all([
@@ -65,7 +66,7 @@ export async function getCommunityBySlug(slug: string): Promise<CommunityDetails
     isMember: (members ?? []).some((member: { user_id: string }) => member.user_id === user.id),
     posts: rows.map((post) => {
       const authorName = names.get(post.author_id) ?? "Usuário";
-      return { id: post.id, body: post.body, createdAt: post.created_at, authorName, authorInitials: initials(authorName), likeCount: likeCounts.get(post.id) ?? 0, commentCount: commentCounts.get(post.id) ?? 0 };
+      return { id: post.id, body: post.body, topic: post.topic, createdAt: post.created_at, authorName, authorInitials: initials(authorName), likeCount: likeCounts.get(post.id) ?? 0, commentCount: commentCounts.get(post.id) ?? 0 };
     }),
   };
 }

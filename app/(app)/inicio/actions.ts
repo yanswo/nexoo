@@ -7,6 +7,7 @@ export type PublishState = { error?: string; success?: boolean } | null;
 
 export async function publishPost(_previous: PublishState, formData: FormData): Promise<PublishState> {
   const body = String(formData.get("body") ?? "").trim();
+  const topic = String(formData.get("topic") ?? "Geral").trim() || "Geral";
   if (!body) return { error: "Escreva algo antes de publicar." };
   if (body.length > 5000) return { error: "A publicação pode ter no máximo 5.000 caracteres." };
 
@@ -17,7 +18,7 @@ export async function publishPost(_previous: PublishState, formData: FormData): 
 
   if (!user) return { error: "Sua sessão expirou. Entre novamente." };
 
-  const { error } = await supabase.from("posts").insert({ author_id: user.id, body });
+  const { error } = await supabase.from("posts").insert({ author_id: user.id, body, topic });
   if (error) {
     console.error("Erro ao publicar post:", error.message);
     return { error: "Não foi possível publicar agora." };
