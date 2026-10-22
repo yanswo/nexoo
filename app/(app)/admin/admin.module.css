@@ -1,0 +1,23 @@
+.page{--navy:#102541;--coral:#ef6f58;--green:#1a7f4b;--red:#b42318;--line:#e6ebf0;--muted:#748397;max-width:1000px;margin:0 auto;padding:34px 42px 60px;display:grid;gap:24px;color:var(--navy)}
+.eyebrow{text-transform:uppercase;letter-spacing:2px;color:#73859b;font:600 10px Manrope,sans-serif;margin-bottom:7px}
+.title{font:700 27px Manrope,sans-serif;letter-spacing:-.8px}
+.subtitle{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.5}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px}
+.cardTitle{font:700 15px Manrope,sans-serif;margin-bottom:14px}
+.empty{color:var(--muted);font-size:13px}
+.list{display:grid;gap:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:14px;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+.rowMain{min-width:0;flex:1}
+.rowMeta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+.rowMeta b{color:var(--navy);font-size:13px}
+.postBody{margin-top:6px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.rowActions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.btn{border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid transparent;white-space:nowrap}
+.btnNeutral{background:#fff;color:var(--navy);border-color:#dce2e8}
+.btnDanger{background:var(--red);color:#fff}
+.btnOk{background:var(--green);color:#fff}
+.tagAdmin,.tagBan,.tagMe{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.5px}
+.tagAdmin{background:#e8eef5;color:#3e6d9d}
+.tagBan{background:#fde8e6;color:var(--red)}
+.tagMe{background:#effaf3;color:var(--green)}
+@media(max-width:700px){.page{padding:24px 16px 50px}.row{flex-direction:column;align-items:stretch}.rowActions{justify-content:flex-start}}
