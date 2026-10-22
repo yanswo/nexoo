@@ -8,8 +8,11 @@ export type PublishState = { error?: string; success?: boolean } | null;
 export async function publishPost(_previous: PublishState, formData: FormData): Promise<PublishState> {
   const body = String(formData.get("body") ?? "").trim();
   const topic = String(formData.get("topic") ?? "Geral").trim() || "Geral";
+  const attachment = formData.get("attachment");
   if (!body) return { error: "Escreva algo antes de publicar." };
   if (body.length > 5000) return { error: "A publicação pode ter no máximo 5.000 caracteres." };
+  const file = attachment && typeof attachment === "object" && "size" in attachment ? attachment as File : null;
+  if (file && file.size > 0 && (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024)) return { error: "A imagem deve ser válida e ter no máximo 5 MB." };
 
   const supabase = await createClient();
   const {
@@ -18,7 +21,13 @@ export async function publishPost(_previous: PublishState, formData: FormData): 
 
   if (!user) return { error: "Sua sessão expirou. Entre novamente." };
 
-  const { error } = await supabase.from("posts").insert({ author_id: user.id, body, topic });
+  let attachmentPath: string | null = null;
+  if (file && file.size > 0) {
+    attachmentPath = `${user.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+    const { error: uploadError } = await supabase.storage.from("school-posts").upload(attachmentPath, file, { contentType: file.type, upsert: false });
+    if (uploadError) { console.error("Erro no upload da imagem:", uploadError.message); return { error: `Não foi possível enviar a imagem: ${uploadError.message}` }; }
+  }
+  const { error } = await supabase.from("posts").insert({ author_id: user.id, body, topic, attachment_path: attachmentPath });
   if (error) {
     console.error("Erro ao publicar post:", error.message);
     return { error: "Não foi possível publicar agora." };

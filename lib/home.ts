@@ -13,6 +13,7 @@ export type HomePost = {
   topic: string;
   recommendationReason?: string;
   comments: PostComment[];
+  attachmentUrl?: string;
 };
 
 export type PostComment = { id: string; body: string; createdAt: string; authorName: string; authorInitials: string };
@@ -41,7 +42,7 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
     await Promise.all([
       supabase
         .from("posts")
-        .select("id, body, topic, created_at, author_id")
+        .select("id, body, topic, attachment_path, created_at, author_id")
         .order("created_at", { ascending: false })
         .limit(50),
       supabase
@@ -64,6 +65,7 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
     created_at: string;
     author_id: string;
     topic: string;
+    attachment_path: string | null;
   }>;
   const postIds = rows.map((post) => post.id);
   const authorIds = [...new Set(rows.map((post) => post.author_id))];
@@ -137,6 +139,7 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
         topic: post.topic,
         recommendationReason: preferredTopicNames.has(post.topic) ? `Porque você interagiu com ${post.topic}` : undefined,
         comments: commentsByPost.get(post.id) ?? [],
+        attachmentUrl: post.attachment_path ? supabase.storage.from("school-posts").getPublicUrl(post.attachment_path).data.publicUrl : undefined,
       };
     });
   const recommendedPosts = preferredTopics.length
