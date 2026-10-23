@@ -7,6 +7,7 @@ export type CommunityPost = {
   authorName: string;
   authorInitials: string;
   likeCount: number;
+  isLiked: boolean;
   commentCount: number;
   topic: string;
   comments: CommunityComment[];
@@ -52,10 +53,11 @@ export async function getCommunityBySlug(slug: string): Promise<CommunityDetails
   const rows = (postRows ?? []) as Array<{ id: string; body: string; topic: string; attachment_path: string | null; created_at: string; author_id: string }>;
   const postIds = rows.map((post) => post.id);
   const authorIds = [...new Set(rows.map((post) => post.author_id))];
-  const [{ data: profiles }, { data: likes }, { data: comments }] = await Promise.all([
+  const [{ data: profiles }, { data: likes }, { data: comments }, { data: userLikes }] = await Promise.all([
     authorIds.length ? supabase.from("profiles").select("id, full_name").in("id", authorIds) : Promise.resolve({ data: [] }),
     postIds.length ? supabase.from("post_likes").select("post_id").in("post_id", postIds) : Promise.resolve({ data: [] }),
     postIds.length ? supabase.from("comments").select("id, post_id, body, created_at, author_id").in("post_id", postIds).order("created_at", { ascending: true }) : Promise.resolve({ data: [] }),
+    postIds.length ? supabase.from("post_likes").select("post_id").eq("user_id", user.id).in("post_id", postIds) : Promise.resolve({ data: [] }),
   ]);
 
   const commentRows = (comments ?? []) as Array<{ id: string; post_id: string; body: string; created_at: string; author_id: string }>;
@@ -64,6 +66,7 @@ export async function getCommunityBySlug(slug: string): Promise<CommunityDetails
   const names = new Map([...((profiles ?? []) as Array<{ id: string; full_name: string }>), ...((commentProfiles ?? []) as Array<{ id: string; full_name: string }>)] .map((profile) => [profile.id, profile.full_name || "Usuário"]));
   const likeCounts = new Map<string, number>();
   const commentCounts = new Map<string, number>();
+  const userLikeIds = new Set(((userLikes ?? []) as Array<{ post_id: string }>).map((like) => like.post_id));
   const commentsByPost = new Map<string, CommunityComment[]>();
   for (const like of (likes ?? []) as Array<{ post_id: string }>) likeCounts.set(like.post_id, (likeCounts.get(like.post_id) ?? 0) + 1);
   for (const comment of commentRows) {
@@ -80,7 +83,7 @@ export async function getCommunityBySlug(slug: string): Promise<CommunityDetails
     isMember: (members ?? []).some((member: { user_id: string }) => member.user_id === user.id),
     posts: rows.map((post) => {
       const authorName = names.get(post.author_id) ?? "Usuário";
-      return { id: post.id, body: post.body, topic: post.topic, attachmentUrl: post.attachment_path ? supabase.storage.from("school-posts").getPublicUrl(post.attachment_path).data.publicUrl : undefined, createdAt: post.created_at, authorName, authorInitials: initials(authorName), likeCount: likeCounts.get(post.id) ?? 0, commentCount: commentCounts.get(post.id) ?? 0, comments: commentsByPost.get(post.id) ?? [] };
+      return { id: post.id, body: post.body, topic: post.topic, attachmentUrl: post.attachment_path ? supabase.storage.from("school-posts").getPublicUrl(post.attachment_path).data.publicUrl : undefined, createdAt: post.created_at, authorName, authorInitials: initials(authorName), likeCount: likeCounts.get(post.id) ?? 0, isLiked: userLikeIds.has(post.id), commentCount: commentCounts.get(post.id) ?? 0, comments: commentsByPost.get(post.id) ?? [] };
     }),
   };
 }

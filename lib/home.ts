@@ -11,6 +11,7 @@ export type HomePost = {
   authorRole: string;
   authorInitials: string;
   likeCount: number;
+  isLiked: boolean;
   commentCount: number;
   isSaved: boolean;
   topic: string;
@@ -358,6 +359,7 @@ export async function getHomeData(): Promise<{
       authorRole: profile?.role ?? "student",
       authorInitials: initials(authorName),
       likeCount: likeCounts.get(post.id) ?? 0,
+      isLiked: likedPostIds.has(post.id),
       commentCount: commentCounts.get(post.id) ?? 0,
       isSaved: savedPostIds.has(post.id),
       topic: post.topic,
