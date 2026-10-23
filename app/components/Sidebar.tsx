@@ -2,11 +2,11 @@
 "use client";
 
 import { useUser } from "@/app/components/UserProvider";
-import { signOut } from "@/app/(app)/actions";
+import { signOut } from "@/app/login/actions";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "@/app/styles/dashboard.module.css";
-import type { Community } from "@/lib/home";
+import type { Community } from "@/lib/communities";
 
 const items = [
     { href: "/inicio", label: "Início", icon: <HomeIcon /> },
