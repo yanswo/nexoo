@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import AdminButton from "./AdminButton";
+import ResetPasswordButton from "./ResetPasswordButton";
 import AutoRefresh from "./AutoRefresh";
 import Link from "next/link";
-import { banUser, deletePost, resetQuiz, setAdmin, unbanUser } from "./actions";
+import { banUser, deletePost, resetPassword, resetQuiz, setAdmin, unbanUser } from "./actions";
 import styles from "./admin.module.css";
 
 type PostRow = { id: string; body: string; created_at: string; author_id: string };
@@ -15,6 +16,7 @@ type ProfileRow = {
   banned_at: string | null;
   created_at: string;
 };
+type AuditRow = { id: number; created_at: string; moderator_id: string; action: string };
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("pt-BR", {
@@ -31,7 +33,7 @@ export default async function AdminPage() {
   if (!me.isAdmin) redirect("/inicio");
 
   const supabase = await createClient();
-  const [{ data: postData }, { data: profileData }] = await Promise.all([
+  const [{ data: postData }, { data: profileData }, { data: auditData }] = await Promise.all([
     supabase
       .from("posts")
       .select("id, body, created_at, author_id")
@@ -42,10 +44,16 @@ export default async function AdminPage() {
       .select("id, full_name, role, banned_at, created_at")
       .order("created_at", { ascending: false })
       .limit(500),
+    supabase
+      .from("audit_logs")
+      .select("id, created_at, moderator_id, action")
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
 
   const posts = (postData ?? []) as PostRow[];
   const profiles = (profileData ?? []) as ProfileRow[];
+  const auditLogs = (auditData ?? []) as AuditRow[];
   const byId = new Map(profiles.map((p) => [p.id, p]));
   const nameOf = (id: string) => byId.get(id)?.full_name?.trim() || "Sem nome";
 
@@ -153,6 +161,9 @@ export default async function AdminPage() {
                         </form>
                       )
                     )}
+                    {!isAdmin && !p.banned_at && (
+                      <ResetPasswordButton userId={p.id} action={resetPassword} />
+                    )}
                     {!p.banned_at && (
                       <form action={setAdmin}>
                         <input type="hidden" name="userId" value={p.id} />
@@ -174,6 +185,24 @@ export default async function AdminPage() {
             );
           })}
         </div>
+      </section>
+      <section className={styles.card}>
+        <div className={styles.cardTitle}>Log de auditoria</div>
+        {auditLogs.length === 0 ? (
+          <div className={styles.empty}>Nenhuma acao registrada ainda.</div>
+        ) : (
+          <div className={styles.list}>
+            {auditLogs.map((entry) => (
+              <div className={styles.row} key={entry.id}>
+                <div className={styles.rowMeta}>
+                  <span>{formatDate(entry.created_at)}</span>
+                  <b>{nameOf(entry.moderator_id)}</b>
+                  <span>{entry.action}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
