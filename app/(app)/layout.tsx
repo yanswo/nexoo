@@ -20,9 +20,9 @@ async function AuthedShell({ children }: { children: React.ReactNode }) {
   const communities = await getCommunities();
   return (
     <UserProvider user={user}>
-      <div className={styles.shell}>
+      <div className={`${styles.shell} mobile-shell`}>
         <Sidebar communities={communities} />
-        <div className={styles.main}>{children}</div>
+        <div className={`${styles.main} mobile-shell-main`}>{children}</div>
       </div>
     </UserProvider>
   );

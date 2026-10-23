@@ -11,6 +11,7 @@ export type AppUser = {
   email: string;
   role: string;
   isAdmin: boolean;
+  avatarUrl: string | null;
 };
 
 // Pega o usuário logado de forma segura (o Supabase confirma o token no servidor).
@@ -30,7 +31,7 @@ export const getCurrentUser = cache(async (): Promise<AppUser> => {
   // Papel (admin, aluno...) e banimento vêm do banco, nunca do navegador.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, banned_at")
+    .select("role, banned_at, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -56,5 +57,6 @@ export const getCurrentUser = cache(async (): Promise<AppUser> => {
     email,
     role,
     isAdmin: role === "admin",
+    avatarUrl: profile?.avatar_url ?? null,
   };
 });

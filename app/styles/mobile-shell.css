@@ -1,0 +1,30 @@
+.mobile-shell-nav-bottom{display:none}
+
+/* Upload controls shared by the home and community post composers. */
+form:has(textarea[name="body"]) label:has(input[type="file"]){display:inline-flex;align-items:center;gap:5px;color:#6e8297;font-size:10px;cursor:pointer}
+form:has(textarea[name="body"]) label:has(input[type="file"]) input[type="file"]{display:none}
+
+@media(max-width:720px){
+  .mobile-shell{min-height:100dvh;padding-bottom:76px}
+  .mobile-shell-sidebar{position:relative;inset:auto;width:100%;height:64px;min-height:64px;padding:14px 16px;background:#102541;box-shadow:0 3px 18px #10254118;z-index:5}
+  .mobile-shell-sidebar .brand{padding:0}
+  .mobile-shell-sidebar .brandMark{width:29px;height:29px}
+  .mobile-shell-sidebar .brandName{font-size:19px}
+  .mobile-shell-sidebar .brandSub{font-size:7px;margin-top:5px}
+  .mobile-shell-desktop-nav,.mobile-shell-user{display:none!important}
+  .mobile-shell-main{margin-left:0;width:100%;overflow:hidden}
+  .mobile-shell-nav-bottom{position:fixed;left:10px;right:10px;bottom:max(10px, env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:8px 5px 7px;background:#102541ef;border:1px solid #ffffff16;border-radius:18px;box-shadow:0 10px 30px #10254138;backdrop-filter:blur(14px);z-index:30}
+  .mobile-shell-nav-item{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:5px 2px;border-radius:11px;color:#9fb0c4;font-size:8px;font-weight:700;line-height:1.1;transition:.2s}
+  .mobile-shell-nav-item svg{width:18px;height:18px;stroke-width:1.9}
+  .mobile-shell-nav-item span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mobile-shell-nav-item:hover,.mobile-shell-nav-item[class*="mobileNavActive"]{background:#ffffff16;color:#fff}
+  .mobile-shell-nav-item[class*="mobileNavActive"] svg{color:#ef6f58}
+  .page,.fullPage{width:100%;padding:24px 16px 30px}
+  .header{gap:15px}
+}
+
+@media(max-width:420px){
+  .mobile-shell-nav-bottom{left:7px;right:7px}
+  .mobile-shell-nav-item{font-size:7px}
+  .mobile-shell-nav-item svg{width:17px;height:17px}
+}

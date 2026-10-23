@@ -12,6 +12,7 @@ const items = [
     { href: "/agenda", label: "Agenda", icon: <CalendarIcon /> },
     { href: "/comunidades", label: "Comunidades", icon: <UsersIcon /> },
     { href: "/salvos", label: "Salvos", icon: <BookmarkIcon /> },
+    { href: "/perfil", label: "Meu perfil", icon: <ProfileIcon /> },
     { href: "/seguranca", label: "Segurança", icon: <ShieldIcon /> },
 ];
 
@@ -25,7 +26,7 @@ export default function Sidebar({
     const joinedCommunities = communities.filter((community) => community.isMember);
 
     return (
-        <aside className={styles.sidebar}>
+        <aside className={`${styles.sidebar} mobile-shell-sidebar`}>
             <div className={styles.brand}>
                 <div className={styles.brandMark}>N</div>
                 <div>
@@ -34,7 +35,7 @@ export default function Sidebar({
                 </div>
             </div>
 
-            <nav className={styles.nav}>
+            <nav className={`${styles.nav} mobile-shell-desktop-nav`}>
                 <ul>
                     {items.map((item) => (
                         <li key={item.href}>
@@ -98,34 +99,39 @@ export default function Sidebar({
                 </ul>
             </nav>
 
-            <div className={styles.user}>
-                <div
-                    className={styles.avatar}
-                    style={{ background: "#ef6f58" }}
-                >
-                    {user.initials}
+            <div className={`${styles.user} mobile-shell-user`} style={{ display: "block" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Link href="/perfil" className={styles.avatar} style={{ background: "#ef6f58", overflow: "hidden", textDecoration: "none" }} title="Abrir meu perfil">
+                        {user.avatarUrl ? <img src={user.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : user.initials}
+                    </Link>
+                    <Link href="/perfil" style={{ minWidth: 0, color: "inherit", textDecoration: "none" }}>
+                        <div className={styles.userName}>{user.name}</div>
+                        <div className={styles.userRole} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 145 }}>{user.email}</div>
+                    </Link>
                 </div>
-
-                <div>
-                    <div className={styles.userName}>{user.name}</div>
-                    <div className={styles.userRole}>{user.email}</div>
-                </div>
-
-                <form action={signOut}>
-                    <button
-                        className={styles.more}
-                        title="Sair da conta"
-                        style={{
-                            background: "none",
-                            border: 0,
-                            cursor: "pointer",
-                            color: "inherit",
-                        }}
-                    >
-                        Sair
+                <form action={signOut} style={{ marginTop: 12 }}>
+                    <button title="Sair da conta" style={{ width: "100%", border: "1px solid #ffffff20", borderRadius: 8, background: "#10254155", color: "#c7d3df", cursor: "pointer", padding: "8px 10px", textAlign: "left", fontSize: 11 }}>
+                        ↪&nbsp; Sair da conta
                     </button>
                 </form>
             </div>
+
+            <nav className={`${styles.mobileNav} mobile-shell-nav-bottom`} aria-label="Navegação principal">
+                {items.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    return (
+                        <Link
+                            key={`mobile-${item.href}`}
+                            href={item.href}
+                            className={`${styles.mobileNavItem} mobile-shell-nav-item ${isActive ? styles.mobileNavActive : ""}`}
+                            aria-current={isActive ? "page" : undefined}
+                        >
+                            {item.icon}
+                            <span>{item.href === "/comunidades" ? "Espaços" : item.label.replace("Meu ", "")}</span>
+                        </Link>
+                    );
+                })}
+            </nav>
         </aside>
     );
 }
@@ -169,6 +175,15 @@ function ShieldIcon() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+    );
+}
+
+function ProfileIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21a8 8 0 0 1 16 0" />
         </svg>
     );
 }
