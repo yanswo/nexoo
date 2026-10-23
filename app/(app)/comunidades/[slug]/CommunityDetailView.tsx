@@ -7,17 +7,236 @@ import type { CommunityDetails } from "@/lib/community";
 import { createCommunityPost, type CommunityPostState } from "./actions";
 import { joinCommunity, leaveCommunity } from "../actions";
 import { createComment, toggleLike } from "@/app/actions/posts";
-import styles from "@/app/styles/comunidade-detalhe.module.css";
-import commentStyles from "@/app/styles/comments.module.css";
+import { deletePostAdminAction } from "@/actions/admin-comunidade";
+import styles from "@/app/styles/comunidade.module.css";
 
-function SubmitButton() { const { pending } = useFormStatus(); return <button className={styles.publishButton} disabled={pending}>{pending ? "Publicando..." : "Publicar"}</button>; }
-
-export default function CommunityDetailView({ community }: { community: CommunityDetails }) {
-  const [state, formAction] = useActionState<CommunityPostState, FormData>(createCommunityPost, {});
-  return <main className={styles.page}><Link className={styles.back} href="/comunidades">← Voltar para comunidades</Link><header className={styles.header}><div className={styles.identity}><div className={styles.icon} style={{ background: community.color }}>{community.name.slice(0, 2).toUpperCase()}</div><div><div className={styles.eyebrow}>Comunidade escolar</div><h1>{community.name}</h1><p>{community.description}</p><span>{community.memberCount} participantes</span></div></div><form action={community.isMember ? leaveCommunity : joinCommunity}><input type="hidden" name="communityId" value={community.id} /><button className={community.isMember ? styles.leaveButton : styles.joinButton}>{community.isMember ? "Sair da comunidade" : "Participar da comunidade"}</button></form></header>{community.isMember ? <section className={styles.composer}><div className={styles.sectionLabel}>Compartilhe com a comunidade</div><form action={formAction} encType="multipart/form-data"><input type="hidden" name="communityId" value={community.id} /><input type="hidden" name="slug" value={community.slug} /><textarea name="body" maxLength={1000} placeholder="Escreva um aviso, uma dúvida ou uma ideia..." required /><div className={styles.composerFooter}><span>Seja respeitoso e ajude a manter o espaço acolhedor.</span><select name="topic" defaultValue="Geral"><option>Geral</option><option>Matemática</option><option>História</option><option>Ciências</option><option>Tecnologia</option><option>Robótica</option><option>Artes</option><option>Esportes</option><option>Avisos</option></select><label style={{ fontSize: 10, color: "#61768c", cursor: "pointer" }}>▧ Imagem<input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: "none" }} /></label><SubmitButton /></div></form>{(state.message || state.error || state.success) && <p className={styles.feedback}>{state.message ?? state.error ?? "Publicação criada."}</p>}</section> : <section className={styles.joinNotice}><strong>Participe para publicar</strong><p>Entre nesta comunidade para compartilhar mensagens e conversar com outros alunos.</p></section>}<section className={styles.feed}><div className={styles.sectionHeader}><div><h2>Publicações</h2><p>As conversas mais recentes deste grupo.</p></div><span>{community.posts.length} publicações</span></div>{community.posts.length ? community.posts.map((post) => <CommunityPost key={post.id} post={post} slug={community.slug} />) : <div className={styles.empty}><strong>Ainda não há publicações</strong><p>Seja a primeira pessoa a iniciar uma conversa.</p></div>}</section></main>;
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button className={styles.publishButton} disabled={pending}>
+      {pending ? "Publicando..." : "Publicar"}
+    </button>
+  );
 }
 
-function CommunityPost({ post, slug }: { post: CommunityDetails["posts"][number]; slug: string }) {
+export default function CommunityDetailView({
+  community,
+  isAdmin = false,
+}: {
+  community: CommunityDetails;
+  isAdmin?: boolean;
+}) {
+  const [state, formAction] = useActionState<CommunityPostState, FormData>(
+    createCommunityPost,
+    {}
+  );
+
+  return (
+    <main className={styles.page}>
+      <Link className={styles.back} href="/comunidades">
+        ← Voltar para comunidades
+      </Link>
+
+      <header className={styles.header}>
+        <div className={styles.identity}>
+          <div
+            className={styles.icon}
+            style={{ background: community.color }}
+          >
+            {community.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div className={styles.eyebrow}>
+              {isAdmin ? "Moderação de Comunidade" : "Comunidade escolar"}
+            </div>
+            <h1>{community.name}</h1>
+            <p>{community.description}</p>
+            <span>{community.memberCount} participantes</span>
+          </div>
+        </div>
+
+        <form action={community.isMember ? leaveCommunity : joinCommunity}>
+          <input type="hidden" name="communityId" value={community.id} />
+          <button
+            type="submit"
+            className={
+              community.isMember ? styles.leaveButton : styles.joinButton
+            }
+          >
+            {community.isMember
+              ? "Sair da comunidade"
+              : "Participar da comunidade"}
+          </button>
+        </form>
+      </header>
+
+      {community.isMember ? (
+        <section className={styles.composer}>
+          <div className={styles.sectionLabel}>Compartilhe com a comunidade</div>
+          <form action={formAction}>
+            <input type="hidden" name="communityId" value={community.id} />
+            <input type="hidden" name="slug" value={community.slug} />
+            <textarea
+              name="body"
+              maxLength={1000}
+              placeholder="Escreva um aviso, uma dúvida ou uma ideia..."
+              required
+            />
+            <div className={styles.composerFooter}>
+              <span>Seja respeitoso e ajude a manter o espaço acolhedor.</span>
+              <select name="topic" defaultValue="Geral">
+                <option>Geral</option>
+                <option>Matemática</option>
+                <option>História</option>
+                <option>Ciências</option>
+                <option>Tecnologia</option>
+                <option>Robótica</option>
+                <option>Artes</option>
+                <option>Esportes</option>
+                <option>Avisos</option>
+              </select>
+              <SubmitButton />
+            </div>
+          </form>
+          {(state.message || state.error || state.success) && (
+            <p className={styles.feedback}>
+              {state.message ?? state.error ?? "Publicação criada."}
+            </p>
+          )}
+        </section>
+      ) : (
+        <section className={styles.joinNotice}>
+          <strong>Participe para publicar</strong>
+          <p>
+            Entre nesta comunidade para compartilhar mensagens e conversar com
+            outros alunos.
+          </p>
+        </section>
+      )}
+
+      <section className={styles.feed}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <h2>Publicações</h2>
+            <p>As conversas mais recentes deste grupo.</p>
+          </div>
+          <span>{community.posts.length} publicações</span>
+        </div>
+
+        {community.posts.length ? (
+          community.posts.map((post) => (
+            <CommunityPost
+              key={post.id}
+              post={post}
+              slug={community.slug}
+              isAdmin={isAdmin}
+            />
+          ))
+        ) : (
+          <div className={styles.empty}>
+            <strong>Ainda não há publicações</strong>
+            <p>Seja a primeira pessoa a iniciar uma conversa.</p>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function CommunityPost({
+  post,
+  slug,
+  isAdmin,
+}: {
+  post: CommunityDetails["posts"][number];
+  slug: string;
+  isAdmin?: boolean;
+}) {
   const [commentsOpen, setCommentsOpen] = useState(false);
-  return <article className={styles.post}><div className={styles.avatar}>{post.authorInitials}</div><div className={styles.postBody}><div className={styles.postMeta}><strong>{post.authorName}</strong><span>{new Date(post.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span></div><p>{post.body}</p><div className={styles.postStats}><form action={toggleLike}><input type="hidden" name="postId" value={post.id} /><input type="hidden" name="redirectPath" value={`/comunidades/${slug}`} /><button type="submit">♡ {post.likeCount}</button></form><button type="button" onClick={() => setCommentsOpen((open) => !open)}>◌ {post.commentCount} comentários</button></div>{commentsOpen && <div className={commentStyles.thread}>{post.comments.length ? post.comments.map((comment) => <div className={commentStyles.comment} key={comment.id}><div className={commentStyles.avatar}>{comment.authorInitials}</div><div><strong>{comment.authorName}</strong><span>{new Date(comment.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span><p>{comment.body}</p></div></div>) : <p className={commentStyles.noComments}>Ainda não há comentários. Seja o primeiro a comentar.</p>}<form className={commentStyles.form} action={createComment}><input type="hidden" name="postId" value={post.id} /><input type="hidden" name="redirectPath" value={`/comunidades/${slug}`} /><input name="body" maxLength={2000} placeholder="Escreva um comentário..." required /><button type="submit">Enviar</button></form></div>}</div></article>;
+
+  return (
+    <article className={styles.post}>
+      <div className={styles.avatar}>{post.authorInitials}</div>
+      <div className={styles.postBody}>
+        <div
+          className={styles.postMeta}
+          style={{ justifyContent: "space-between", width: "100%" }}
+        >
+          <div>
+            <strong>{post.authorName}</strong>
+            <span>
+              {new Date(post.createdAt).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "short",
+              })}
+            </span>
+          </div>
+
+          {isAdmin && (
+            <form action={deletePostAdminAction}>
+              <input type="hidden" name="postId" value={post.id} />
+              <input type="hidden" name="slug" value={slug} />
+              <button
+                type="submit"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#ef4444",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                onClick={(e) => {
+                  if (!confirm("Remover este post como moderador?")) {
+                    e.preventDefault();
+                  }
+                }}
+              >
+                ✕ Apagar post
+              </button>
+            </form>
+          )}
+        </div>
+
+        <p>{post.body}</p>
+
+        <div className={styles.postStats}>
+          <form action={toggleLike}>
+            <input type="hidden" name="postId" value={post.id} />
+            <input
+              type="hidden"
+              name="redirectPath"
+              value={`/comunidades/${slug}`}
+            />
+            <button type="submit">♡ {post.likeCount}</button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() => setCommentsOpen((open) => !open)}
+          >
+            ◌ {post.commentCount} comentários
+          </button>
+        </div>
+
+        {commentsOpen && (
+          <form className={styles.commentForm} action={createComment}>
+            <input type="hidden" name="postId" value={post.id} />
+            <input
+              type="hidden"
+              name="redirectPath"
+              value={`/comunidades/${slug}`}
+            />
+            <input
+              name="body"
+              maxLength={2000}
+              placeholder="Escreva um comentário..."
+              required
+            />
+            <button type="submit">Enviar</button>
+          </form>
+        )}
+      </div>
+    </article>
+  );
 }
