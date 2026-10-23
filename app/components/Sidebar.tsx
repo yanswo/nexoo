@@ -22,6 +22,7 @@ export default function Sidebar({
 }) {
     const pathname = usePathname();
     const user = useUser();
+    const joinedCommunities = communities.filter((community) => community.isMember);
 
     return (
         <aside className={styles.sidebar}>
@@ -76,7 +77,7 @@ export default function Sidebar({
                 <div className={styles.sectionLabel}>Seus espaços</div>
 
                 <ul>
-                    {communities.slice(0, 4).map((community) => (
+                    {joinedCommunities.slice(0, 4).map((community) => (
                         <li key={community.id}>
                             <Link
                                 href={`/comunidades/${community.slug}`}
@@ -91,8 +92,8 @@ export default function Sidebar({
                         </li>
                     ))}
 
-                    {communities.length === 0 && (
-                        <li className={styles.space}>Nenhum espaço ainda</li>
+                    {joinedCommunities.length === 0 && (
+                        <li className={styles.space}>Participe de uma comunidade</li>
                     )}
                 </ul>
             </nav>

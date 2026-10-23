@@ -7,7 +7,7 @@ import type { CommunityDetails } from "@/lib/community";
 import { createCommunityPost, type CommunityPostState } from "./actions";
 import { joinCommunity, leaveCommunity } from "../actions";
 import { createComment, toggleLike } from "@/app/actions/posts";
-import styles from "@/app/styles/comunidade.module.css";
+import styles from "@/app/styles/comunidade-detalhe.module.css";
 import commentStyles from "@/app/styles/comments.module.css";
 
 function SubmitButton() { const { pending } = useFormStatus(); return <button className={styles.publishButton} disabled={pending}>{pending ? "Publicando..." : "Publicar"}</button>; }

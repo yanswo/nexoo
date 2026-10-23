@@ -25,6 +25,7 @@ export type HomeEvent = {
   startsAt: string;
   location: string;
 };
+export type CommunityNotification = { id: string; title: string; text: string; createdAt: string; communityName: string; communityColor: string };
 
 function initials(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
@@ -35,7 +36,7 @@ function displayName(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : "Usuário";
 }
 
-export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPosts: HomePost[]; events: HomeEvent[] }> {
+export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPosts: HomePost[]; events: HomeEvent[]; notifications: CommunityNotification[] }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -44,6 +45,7 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
       supabase
         .from("posts")
         .select("id, body, topic, attachment_path, created_at, author_id")
+        .is("community_id", null)
         .order("created_at", { ascending: false })
         .limit(50),
       supabase
@@ -112,6 +114,17 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
   const preferredTopics = [...interestScores.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
   const preferredTopicNames = new Set(preferredTopics.map(([topic]) => topic));
 
+  const { data: joinedRows } = user ? await supabase.from("community_members").select("community_id").eq("user_id", user.id) : { data: [] };
+  const joinedCommunityIds = ((joinedRows ?? []) as Array<{ community_id: string }>).map((row) => row.community_id);
+  let notifications: CommunityNotification[] = [];
+  if (joinedCommunityIds.length) {
+    const { data: communityPosts } = await supabase.from("posts").select("id, body, created_at, community_id").in("community_id", joinedCommunityIds).order("created_at", { ascending: false }).limit(8);
+    const communityIds = [...new Set(((communityPosts ?? []) as Array<{ community_id: string }>).map((post) => post.community_id))];
+    const { data: notificationCommunities } = communityIds.length ? await supabase.from("communities").select("id, name, color").in("id", communityIds) : { data: [] };
+    const communityMap = new Map(((notificationCommunities ?? []) as Array<{ id: string; name: string; color: string }>).map((community) => [community.id, community]));
+    notifications = ((communityPosts ?? []) as Array<{ id: string; body: string; created_at: string; community_id: string }>).map((post) => { const community = communityMap.get(post.community_id); return { id: post.id, title: community?.name ?? "Comunidade", text: post.body, createdAt: post.created_at, communityName: community?.name ?? "Comunidade", communityColor: community?.color ?? "#4e82b8" }; });
+  }
+
   for (const like of (likes ?? []) as Array<{ post_id: string }>) {
     likeCounts.set(like.post_id, (likeCounts.get(like.post_id) ?? 0) + 1);
   }
@@ -161,5 +174,6 @@ export async function getHomeData(): Promise<{ posts: HomePost[]; recommendedPos
       startsAt: event.starts_at,
       location: event.location ?? "Local não informado",
     })),
+    notifications,
   };
 }
