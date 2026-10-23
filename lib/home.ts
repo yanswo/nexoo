@@ -34,8 +34,18 @@ export type HomeEvent = {
   location: string;
 };
 
+export type CommunityNotification = {
+  id: string;
+  title: string;
+  text: string;
+  createdAt: string;
+  communityName: string;
+  communityColor: string;
+};
+
 function initials(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
+
   return (
     (parts[0]?.[0] ?? "?") + (parts.at(-1)?.[0] ?? "")
   ).toUpperCase();
@@ -51,11 +61,12 @@ export async function getHomeData(): Promise<{
   posts: HomePost[];
   recommendedPosts: HomePost[];
   events: HomeEvent[];
+  notifications: CommunityNotification[];
 }> {
-  // Esta função utiliza dados dinâmicos da aplicação.
   await connection();
 
   const supabase = await createClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -70,6 +81,7 @@ export async function getHomeData(): Promise<{
     supabase
       .from("posts")
       .select("id, body, topic, attachment_path, created_at, author_id")
+      .is("community_id", null)
       .order("created_at", { ascending: false })
       .limit(50),
 
@@ -81,15 +93,24 @@ export async function getHomeData(): Promise<{
       .limit(5),
 
     user
-      ? supabase.from("saved_items").select("post_id").eq("user_id", user.id)
+      ? supabase
+        .from("saved_items")
+        .select("post_id")
+        .eq("user_id", user.id)
       : Promise.resolve({ data: [] }),
 
     user
-      ? supabase.from("post_likes").select("post_id").eq("user_id", user.id)
+      ? supabase
+        .from("post_likes")
+        .select("post_id")
+        .eq("user_id", user.id)
       : Promise.resolve({ data: [] }),
 
     user
-      ? supabase.from("comments").select("post_id").eq("author_id", user.id)
+      ? supabase
+        .from("comments")
+        .select("post_id")
+        .eq("author_id", user.id)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -123,7 +144,10 @@ export async function getHomeData(): Promise<{
         : Promise.resolve({ data: [] }),
 
       postIds.length
-        ? supabase.from("post_likes").select("post_id").in("post_id", postIds)
+        ? supabase
+          .from("post_likes")
+          .select("post_id")
+          .in("post_id", postIds)
         : Promise.resolve({ data: [] }),
 
       postIds.length
@@ -148,7 +172,7 @@ export async function getHomeData(): Promise<{
   ];
 
   const missingCommentAuthors = commentAuthorIds.filter(
-    (id) => !authorIds.includes(id)
+    (id) => !authorIds.includes(id),
   );
 
   const { data: commentProfiles } = missingCommentAuthors.length
@@ -170,7 +194,7 @@ export async function getHomeData(): Promise<{
         full_name: string;
         role: string;
       }>),
-    ].map((profile) => [profile.id, profile])
+    ].map((profile) => [profile.id, profile]),
   );
 
   const likeCounts = new Map<string, number>();
@@ -179,20 +203,20 @@ export async function getHomeData(): Promise<{
 
   const savedPostIds = new Set(
     ((savedRows ?? []) as Array<{ post_id: string }>).map(
-      (row) => row.post_id
-    )
+      (row) => row.post_id,
+    ),
   );
 
   const likedPostIds = new Set(
     ((likedRows ?? []) as Array<{ post_id: string }>).map(
-      (row) => row.post_id
-    )
+      (row) => row.post_id,
+    ),
   );
 
   const commentedPostIds = new Set(
     ((commentedRows ?? []) as Array<{ post_id: string }>).map(
-      (row) => row.post_id
-    )
+      (row) => row.post_id,
+    ),
   );
 
   const interestScores = new Map<string, number>();
@@ -207,7 +231,7 @@ export async function getHomeData(): Promise<{
     if (points) {
       interestScores.set(
         post.topic,
-        (interestScores.get(post.topic) ?? 0) + points
+        (interestScores.get(post.topic) ?? 0) + points,
       );
     }
   }
@@ -217,24 +241,95 @@ export async function getHomeData(): Promise<{
     .slice(0, 3);
 
   const preferredTopicNames = new Set(
-    preferredTopics.map(([topic]) => topic)
+    preferredTopics.map(([topic]) => topic),
   );
+
+  // Notificações de posts recentes nas comunidades das quais o usuário participa.
+  const { data: joinedRows } = user
+    ? await supabase
+      .from("community_members")
+      .select("community_id")
+      .eq("user_id", user.id)
+    : { data: [] };
+
+  const joinedCommunityIds = (
+    (joinedRows ?? []) as Array<{ community_id: string }>
+  ).map((row) => row.community_id);
+
+  let notifications: CommunityNotification[] = [];
+
+  if (joinedCommunityIds.length) {
+    const { data: communityPosts } = await supabase
+      .from("posts")
+      .select("id, body, created_at, community_id")
+      .in("community_id", joinedCommunityIds)
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    const communityIds = [
+      ...new Set(
+        (
+          (communityPosts ?? []) as Array<{
+            community_id: string;
+          }>
+        ).map((post) => post.community_id),
+      ),
+    ];
+
+    const { data: notificationCommunities } = communityIds.length
+      ? await supabase
+        .from("communities")
+        .select("id, name, color")
+        .in("id", communityIds)
+      : { data: [] };
+
+    const communityMap = new Map(
+      (
+        (notificationCommunities ?? []) as Array<{
+          id: string;
+          name: string;
+          color: string;
+        }>
+      ).map((community) => [community.id, community]),
+    );
+
+    notifications = (
+      (communityPosts ?? []) as Array<{
+        id: string;
+        body: string;
+        created_at: string;
+        community_id: string;
+      }>
+    ).map((post) => {
+      const community = communityMap.get(post.community_id);
+      const communityName = community?.name ?? "Comunidade";
+
+      return {
+        id: post.id,
+        title: communityName,
+        text: post.body,
+        createdAt: post.created_at,
+        communityName,
+        communityColor: community?.color ?? "#4e82b8",
+      };
+    });
+  }
 
   for (const like of (likes ?? []) as Array<{ post_id: string }>) {
     likeCounts.set(
       like.post_id,
-      (likeCounts.get(like.post_id) ?? 0) + 1
+      (likeCounts.get(like.post_id) ?? 0) + 1,
     );
   }
 
   for (const comment of commentRows) {
     commentCounts.set(
       comment.post_id,
-      (commentCounts.get(comment.post_id) ?? 0) + 1
+      (commentCounts.get(comment.post_id) ?? 0) + 1,
     );
 
     const authorName = displayName(
-      profileById.get(comment.author_id)?.full_name
+      profileById.get(comment.author_id)?.full_name,
     );
 
     const postComments = commentsByPost.get(comment.post_id) ?? [];
@@ -279,7 +374,7 @@ export async function getHomeData(): Promise<{
   });
 
   const currentUserName = displayName(
-    profileById.get(user?.id ?? "")?.full_name
+    profileById.get(user?.id ?? "")?.full_name,
   );
 
   const recommendedPosts = preferredTopics.length
@@ -287,7 +382,7 @@ export async function getHomeData(): Promise<{
       .filter(
         (post) =>
           preferredTopicNames.has(post.topic) &&
-          post.authorName !== currentUserName
+          post.authorName !== currentUserName,
       )
       .slice(0, 3)
     : [];
@@ -306,5 +401,6 @@ export async function getHomeData(): Promise<{
       startsAt: event.starts_at,
       location: event.location ?? "Local não informado",
     })),
+    notifications,
   };
 }

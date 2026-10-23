@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useUser } from "../../components/UserProvider";
-import type { HomeEvent, HomePost } from "../../../lib/home";
+import type { CommunityNotification, HomeEvent, HomePost } from "../../../lib/home";
 import { createClient } from "../../../lib/supabase/client";
 import { deletePost } from "../admin/actions";
 import { createComment, toggleLike } from "@/app/actions/posts";
@@ -12,6 +12,7 @@ import { publishPost, savePost, type PublishState } from "./actions";
 import styles from "@/app/styles/inicio.module.css";
 import commentStyles from "@/app/styles/comments.module.css";
 import interactionStyles from "@/app/styles/inicio-interactions.module.css";
+import notificationStyles from "@/app/styles/notifications.module.css";
 
 function formatEvent(event: HomeEvent) {
   const date = new Date(event.startsAt);
@@ -24,10 +25,11 @@ function formatRelative(value: string) { const minutes = Math.max(1, Math.floor(
 
 function PublishButton() { const { pending } = useFormStatus(); return <button className={styles.publishButton} type="submit" disabled={pending}><Send />{pending ? "Publicando..." : "Publicar"}</button>; }
 
-export default function InicioView({ posts, recommendedPosts, events }: { posts: HomePost[]; recommendedPosts: HomePost[]; events: HomeEvent[] }) {
+export default function InicioView({ posts, recommendedPosts, events, notifications }: { posts: HomePost[]; recommendedPosts: HomePost[]; events: HomeEvent[]; notifications: CommunityNotification[] }) {
   const user = useUser();
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [state, action] = useActionState<PublishState, FormData>(publishPost, null);
   useEffect(() => { const supabase = createClient(); const channel = supabase.channel("home-posts").on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => router.refresh()).subscribe(); return () => { void supabase.removeChannel(channel); }; }, [router]);
   const term = search.trim().toLowerCase();
@@ -36,7 +38,7 @@ export default function InicioView({ posts, recommendedPosts, events }: { posts:
   const visibleRecommendations = recommendedPosts.filter(matches);
   return <main className={styles.page}>
     <section className={styles.content}>
-      <header className={styles.header}><div><span className={styles.eyebrow}>{formatToday()}</span><h1>Bom dia, <em>{user.firstName}</em></h1><p>Veja o que está acontecendo na sua comunidade escolar.</p></div><div className={styles.headerActions}><label className={styles.search}><Search /><input className={interactionStyles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar na escola" aria-label="Buscar na escola" /><kbd>⌘ K</kbd></label><button className={styles.notification} aria-label="Notificações"><Bell /><i /></button></div></header>
+      <header className={styles.header}><div><span className={styles.eyebrow}>{formatToday()}</span><h1>Bom dia, <em>{user.firstName}</em></h1><p>Veja o que está acontecendo na sua comunidade escolar.</p></div><div className={styles.headerActions}><label className={styles.search}><Search /><input className={interactionStyles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar na escola" aria-label="Buscar na escola" /><kbd>⌘ K</kbd></label><div className={notificationStyles.wrap}><button className={notificationStyles.button} aria-label="Notificações" onClick={() => setNotificationsOpen((open) => !open)}><Bell />{notifications.length > 0 && <i className={notificationStyles.dot} />}</button>{notificationsOpen && <div className={notificationStyles.panel}><div className={notificationStyles.heading}><strong>Mensagens das suas comunidades</strong><span>{notifications.length} recentes</span></div>{notifications.length ? notifications.map((notification) => <div className={notificationStyles.item} key={notification.id}><div className={notificationStyles.icon} style={{ background: notification.communityColor }}>{notification.communityName.slice(0, 2).toUpperCase()}</div><div><strong>{notification.title}</strong><p>{notification.text}</p><time>{formatRelative(notification.createdAt)}</time></div></div>) : <p className={notificationStyles.empty}>Você ainda não tem novas mensagens nas comunidades.</p>}</div>}</div></div></header>
       <div className={styles.stats}><div><strong>{posts.length}</strong><span>atualizações recentes</span></div><div><strong>{events.length}</strong><span>próximos eventos</span></div><div><strong>∞</strong><span>possibilidades de aprender</span></div></div>
       <section className={styles.composer}><div className={styles.composerHeading}><div className={styles.avatar} style={{ background: "#ef6f58" }}>{user.initials}</div><div><strong>Compartilhe com a escola</strong><span>O que você gostaria de contar hoje?</span></div></div><form action={action} encType="multipart/form-data"><textarea name="body" rows={3} maxLength={5000} placeholder="Uma ideia, dúvida ou conquista..." /><div className={styles.composerFooter}><div className={styles.composerHint}><span>Visível para a comunidade escolar</span><label className={styles.topicSelect}>Tema <select name="topic" defaultValue="Geral"><option>Geral</option><option>Matemática</option><option>História</option><option>Ciências</option><option>Tecnologia</option><option>Robótica</option><option>Artes</option><option>Esportes</option><option>Avisos</option></select></label><label className={styles.uploadButton}><ImageIcon /> Imagem<input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,image/gif" /></label></div><PublishButton /></div>{state?.error && <div className={styles.error}>{state.error}</div>}{state?.success && <div className={styles.success}>Publicação enviada para a comunidade.</div>}</form></section>
       {visibleRecommendations.length > 0 && <section className={styles.recommendations}><div className={styles.recommendationHeading}><div><span className={styles.eyebrow}>Personalizado para você</span><h2>Para você</h2><p>Conteúdos escolhidos a partir das suas interações.</p></div><span className={styles.spark}>✦</span></div><div className={styles.recommendationGrid}>{visibleRecommendations.map((post) => <PostCard key={`recommended-${post.id}`} post={post} recommended />)}</div></section>}
