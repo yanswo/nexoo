@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "./seguranca.module.css";
 import ProtecaoNexo from "./ProtecaoNexo";
 import PhishingQuiz from "./PhishingQuiz";
@@ -17,6 +18,14 @@ export default function SegurancaView() {
           na internet.
         </p>
       </header>
+
+      <Link href="/quiz" className={styles.challenge}>
+        <span>
+          <strong>Desafio Nexo valendo bombons</strong>
+          <small>Responda rápido, acumule pontos e suba no ranking.</small>
+        </span>
+        <span className={styles.challengeBtn}>Jogar agora</span>
+      </Link>
 
       <ProtecaoNexo />
 

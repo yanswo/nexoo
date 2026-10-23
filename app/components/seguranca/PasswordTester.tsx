@@ -18,6 +18,7 @@ const SEQUENCIAS = ["0123456789", "abcdefghijklmnopqrstuvwxyz", "qwertyuiop", "a
 function temSequencia(pw: string) {
   const p = pw.toLowerCase();
   if (/(.)\1{2,}/.test(p)) return true;
+  if (/(.{2,})\1/.test(p)) return true;
   for (const seq of SEQUENCIAS) {
     for (let i = 0; i + 4 <= seq.length; i++) {
       const trecho = seq.slice(i, i + 4);
@@ -62,7 +63,8 @@ function analisar(pw: string) {
 
   const charset = (tem.min ? 26 : 0) + (tem.mai ? 26 : 0) + (tem.num ? 10 : 0) + (tem.sim ? 33 : 0);
   let bits = pw.length * Math.log2(Math.max(charset, 1));
-  if (sequencia) bits *= 0.6;
+  // Length alone must not make a predictable run look strong.
+  if (sequencia) bits = Math.min(bits * 0.6, 20);
   if (comum) bits = Math.min(bits, 8);
 
   // Estimativa para um ataque offline rápido (10 bilhões de tentativas por segundo), em média metade do caminho.

@@ -3,7 +3,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import AdminButton from "./AdminButton";
 import AutoRefresh from "./AutoRefresh";
-import { banUser, deletePost, setAdmin, unbanUser } from "./actions";
+import Link from "next/link";
+import { banUser, deletePost, resetQuiz, setAdmin, unbanUser } from "./actions";
 import styles from "./admin.module.css";
 
 type PostRow = { id: string; body: string; created_at: string; author_id: string };
@@ -58,6 +59,21 @@ export default async function AdminPage() {
           Remova publicações e suspenda contas. Esta página atualiza sozinha a cada poucos segundos.
         </p>
       </header>
+
+      <section className={styles.card}>
+        <div className={styles.cardTitle}>Desafio (quiz)</div>
+        <div className={styles.row}>
+          <div className={styles.rowMain}>
+            <div className={styles.postBody}>Abra o ranking durante a apresentação. Zere as tentativas dos testes antes de começar.</div>
+          </div>
+          <div className={styles.rowActions}>
+            <Link href="/quiz/ranking" className={`${styles.btn} ${styles.btnNeutral}`}>Abrir ranking</Link>
+            <form action={resetQuiz}>
+              <AdminButton tone="danger" confirmText="Zerar todas as tentativas do quiz? Essa ação não pode ser desfeita.">Zerar quiz</AdminButton>
+            </form>
+          </div>
+        </div>
+      </section>
 
       <section className={styles.card}>
         <div className={styles.cardTitle}>Publicações recentes ({posts.length})</div>

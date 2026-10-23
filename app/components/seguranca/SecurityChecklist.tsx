@@ -26,11 +26,11 @@ export default function SecurityChecklist() {
   useEffect(() => {
     try {
       const salvo = localStorage.getItem(CHAVE);
-      if (salvo) setFeitos(JSON.parse(salvo));
+      if (salvo) window.setTimeout(() => setFeitos(JSON.parse(salvo)), 0);
     } catch {
       /* sem armazenamento disponível: segue sem salvar */
     }
-    setCarregado(true);
+    window.setTimeout(() => setCarregado(true), 0);
   }, []);
 
   function atualizar(novos: string[]) {

@@ -70,3 +70,8 @@
 
 @media(max-width:960px){.root{padding:24px 18px 50px}.twoCols{grid-template-columns:1fr}.protGrid{grid-template-columns:1fr 1fr}.clList{grid-template-columns:1fr}}
 @media(max-width:560px){.protGrid{grid-template-columns:1fr}.answers{grid-template-columns:1fr}}
+
+.challenge{display:flex;justify-content:space-between;align-items:center;gap:16px;background:linear-gradient(90deg,#ef6f58,#d9543d);color:#fff;border-radius:14px;padding:18px 22px;text-decoration:none}
+.challenge strong{display:block;font:800 16px Manrope,sans-serif}
+.challenge small{display:block;font-size:12px;opacity:.9;margin-top:3px}
+.challengeBtn{background:#fff;color:#d9543d;font-weight:800;font-size:13px;border-radius:9px;padding:10px 16px;white-space:nowrap}

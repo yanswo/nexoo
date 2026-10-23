@@ -44,6 +44,14 @@ export async function unbanUser(formData: FormData) {
   refresh();
 }
 
+export async function resetQuiz() {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_reset_quiz");
+  if (error) console.error("Erro ao zerar quiz:", error.message);
+  revalidatePath("/quiz");
+  revalidatePath("/quiz/ranking");
+}
+
 export async function setAdmin(formData: FormData) {
   const userId = readId(formData, "userId");
   if (!userId) return;

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Sidebar from "../components/Sidebar";
+import BottomNav from "../components/BottomNav";
 import { UserProvider } from "../components/UserProvider";
 import { getCurrentUser } from "@/lib/auth";
 import styles from "../styles/dashboard.module.css";
@@ -23,6 +24,7 @@ async function AuthedShell({ children }: { children: React.ReactNode }) {
       <div className={styles.shell}>
         <Sidebar communities={communities} />
         <div className={styles.main}>{children}</div>
+        <BottomNav />
       </div>
     </UserProvider>
   );
