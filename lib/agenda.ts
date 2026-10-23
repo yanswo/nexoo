@@ -18,7 +18,7 @@ export async function getAgendaEvents(): Promise<AgendaEvent[]> {
   const { data, error } = await supabase.from("events")
     .select("id, title, description, category, location, starts_at, ends_at, created_by")
     .gte("starts_at", from.toISOString())
-    .limit(200)
+    .limit(500)
     .order("starts_at", { ascending: true });
 
   if (error) {

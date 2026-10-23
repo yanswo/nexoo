@@ -8,6 +8,7 @@ do $$
 declare
   seed_user uuid;
   seed_community uuid;
+  dia date;
 begin
   select id
   into seed_user
@@ -87,6 +88,29 @@ begin
       and e.community_id = seed_community
       and e.title = dados.titulo
   );
+
+  -- Grade de aulas: de segunda a sexta, até 20 de dezembro de 2026.
+  -- Os eventos são apagados e recriados para que a seed possa ser executada novamente.
+  delete from public.events
+  where created_by = seed_user
+    and title like 'Aula de %'
+    and description = 'Aula regular da grade escolar.';
+
+  for dia in
+    select data::date
+    from generate_series(date '2026-10-26', date '2026-12-20', interval '1 day') as serie(data)
+  loop
+    if extract(isodow from dia) between 1 and 5 then
+      insert into public.events
+        (created_by, community_id, title, description, category, location, starts_at, ends_at)
+      values
+        (seed_user, seed_community, 'Aula de Matemática', 'Aula regular da grade escolar.', 'other', 'Sala 101', timezone('America/Fortaleza', dia + time '08:00'), timezone('America/Fortaleza', dia + time '08:50')),
+        (seed_user, seed_community, 'Aula de Língua Portuguesa', 'Aula regular da grade escolar.', 'other', 'Sala 101', timezone('America/Fortaleza', dia + time '09:00'), timezone('America/Fortaleza', dia + time '09:50')),
+        (seed_user, seed_community, 'Aula de Ciências', 'Aula regular da grade escolar.', 'other', 'Laboratório de Ciências', timezone('America/Fortaleza', dia + time '10:10'), timezone('America/Fortaleza', dia + time '11:00')),
+        (seed_user, seed_community, 'Aula de História', 'Aula regular da grade escolar.', 'other', 'Sala 102', timezone('America/Fortaleza', dia + time '11:10'), timezone('America/Fortaleza', dia + time '12:00')),
+        (seed_user, seed_community, 'Aula de Tecnologia', 'Aula regular da grade escolar.', 'other', 'Laboratório de Tecnologia', timezone('America/Fortaleza', dia + time '13:30'), timezone('America/Fortaleza', dia + time '14:20'));
+    end if;
+  end loop;
 
   raise notice 'Seed criada para o usuário %.', seed_user;
 end;
